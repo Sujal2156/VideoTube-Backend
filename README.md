@@ -147,8 +147,8 @@ Base URL: `http://localhost:8000/api/v1`
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/Sujal2156/StreamCore.git
-cd StreamCore
+git clone https://github.com/Sujal2156/VideoTube-Backend.git
+cd VideoTube-Backend
 ```
 
 ### 2. Install dependencies
