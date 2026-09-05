@@ -1,7 +1,6 @@
-import mongoose, {Schema} from "mongoose";
-import jwt from "jsonwebtoken"
-import bcrypt from "bcrypt"
-
+import mongoose, { Schema } from "mongoose";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
     {
@@ -10,7 +9,7 @@ const userSchema = new Schema(
             required: true,
             unique: true,
             lowercase: true,
-            trim: true, 
+            trim: true,
             index: true
         },
         email: {
@@ -18,20 +17,20 @@ const userSchema = new Schema(
             required: true,
             unique: true,
             lowercase: true,
-            trim: true, 
+            trim: true
         },
         fullName: {
             type: String,
             required: true,
-            trim: true, 
+            trim: true,
             index: true
         },
         avatar: {
-            type: String, // cloudinary url
-            required: true,
+            type: String, // Cloudinary URL
+            required: true
         },
         coverImage: {
-            type: String, // cloudinary url
+            type: String // Cloudinary URL
         },
         watchHistory: [
             {
@@ -41,36 +40,28 @@ const userSchema = new Schema(
         ],
         password: {
             type: String,
-            required: [true, 'Password is required']
+            required: [true, "Password is required"]
         },
         refreshToken: {
             type: String
         }
-
     },
     {
         timestamps: true
     }
-)
+);
 
-// Hash the password before saving the user model
-//pre is mongoose middleware which runs before saving document
-userSchema.pre("save", async function () { 
-    if(!this.isModified("password")) return ; // if password is not modified then skip hashing
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
+    this.password = await bcrypt.hash(this.password, 10);
+});
 
-    this.password = await bcrypt.hash(this.password, 10) //hash the password with salt rounds = 10
-    // next();
-})
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrypt.compare(password, this.password);
+};
 
-// Method to compare given password with database hashed password
-userSchema.methods.isPasswordCorrect = async function(password){ 
-    return await bcrypt.compare(password, this.password) // true or false
-} 
-
-// Method to generate JWT tokens
-userSchema.methods.generateAccessToken = function(){ 
-    //sign parameters: payload, secret key, options
-    return jwt.sign( // no arrow function here because we need 'this' keyword to refer to user document
+userSchema.methods.generateAccessToken = function () {
+    return jwt.sign(
         {
             _id: this._id,
             email: this.email,
@@ -79,23 +70,21 @@ userSchema.methods.generateAccessToken = function(){
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY 
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
         }
-    )
-}
+    );
+};
 
-// Method to generate Refresh Token
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {
-            _id: this._id, 
-            //why we not put other details like email, username here? because refresh token is only used to get new access token. so just _id is enough
+            _id: this._id
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
-    )
-}
+    );
+};
 
-export const User = mongoose.model("User", userSchema)
+export const User = mongoose.model("User", userSchema);

@@ -1,24 +1,23 @@
 class ApiError extends Error {
     constructor(
         statusCode,
-        message= "Something went wrong",
-        errors = [],      // yahan multiple errors rakh sakte ho (e.g. validation issues)
-        stack = ""        // stack se pata chalega error kahan se aaya (line/function)
-    ){
-        super(message) 
-        this.statusCode = statusCode   // HTTP status code (400, 404, 500...)
-        this.data = null               // extra data ki jagah, abhi null
-        this.message = message         // client ko dikhane wala message
-        this.success = false;          // error hai to success hamesha false
-        this.errors = errors           // detailed errors list
+        message = "Something went wrong",
+        errors = [],
+        stack = ""
+    ) {
+        super(message);
+        this.statusCode = statusCode;
+        this.data = null;
+        this.message = message;
+        this.success = false;
+        this.errors = errors;
 
         if (stack) {
-            this.stack = stack         // custom stack aaya to wahi set karo
+            this.stack = stack;
         } else {
-            Error.captureStackTrace(this, this.constructor) // warna auto capture karo
+            Error.captureStackTrace(this, this.constructor);
         }
-
     }
 }
 
-export {ApiError}
+export { ApiError };
