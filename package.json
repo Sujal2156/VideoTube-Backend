@@ -1,14 +1,15 @@
 {
-  "name": "backend",
+  "name": "videotube-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend REST API for video hosting, channel subscriptions, and engagement platform",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+    "start": "node -r dotenv/config --experimental-json-modules src/index.js"
   },
-  "author": "Suj Bhalala",
+  "author": "Sujal Bhalala",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "nodemon": "^3.1.11",
     "prettier": "^3.8.0"

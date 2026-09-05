@@ -1,0 +1,1169 @@
+{
+  "info": {
+    "_postman_id": "videotube-api-collection",
+    "name": "VideoTube API Collection",
+    "description": "Postman API Collection for VideoTube backend — covering Auth, Video management, Comments, Likes, Playlists, Subscriptions, Tweets, and Dashboard analytics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{ACCESS_TOKEN}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Healthcheck",
+      "description": "Server status and health check endpoints.",
+      "item": [
+        {
+          "name": "Health Check (Server Ping)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success boolean and OK message\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.success).to.eql(true);",
+                  "    pm.expect(res.data.status).to.eql(\"OK\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is under 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/healthcheck",
+              "host": ["{{BASE_URL}}"],
+              "path": ["healthcheck"]
+            },
+            "description": "Checks whether the backend Express server is running and accessible."
+          },
+          "response": [
+            {
+              "name": "Healthcheck Success",
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{BASE_URL}}/healthcheck" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 200,\n  \"data\": {\n    \"status\": \"OK\"\n  },\n  \"message\": \"Health check passed\",\n  \"success\": true\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Users & Authentication",
+      "description": "User registration, authentication, token refresh, profile management, and watch history.",
+      "item": [
+        {
+          "name": "1. Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"User created without password/refreshToken in response\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.success).to.eql(true);",
+                  "    pm.expect(res.data).to.have.property(\"_id\");",
+                  "    pm.expect(res.data).to.have.property(\"username\");",
+                  "    pm.expect(res.data).to.not.have.property(\"password\");",
+                  "    pm.expect(res.data).to.not.have.property(\"refreshToken\");",
+                  "    ",
+                  "    if (res.data._id) {",
+                  "        pm.collectionVariables.set(\"USER_ID\", res.data._id);",
+                  "        pm.collectionVariables.set(\"USERNAME\", res.data.username);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "fullName", "value": "Sujal Bhalala", "type": "text" },
+                { "key": "email", "value": "sujal@example.com", "type": "text" },
+                { "key": "username", "value": "sujal21", "type": "text" },
+                { "key": "password", "value": "secretPass123", "type": "text" },
+                { "key": "avatar", "type": "file", "src": "", "description": "Required avatar image (JPEG/PNG/WebP)" },
+                { "key": "coverImage", "type": "file", "src": "", "description": "Optional cover banner image" }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/register",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "register"]
+            },
+            "description": "Registers a new user and uploads avatar/cover image to Cloudinary."
+          }
+        },
+        {
+          "name": "2. Login User (Auto-sets Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Auto-saves Access Token & Refresh Token\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.success).to.eql(true);",
+                  "    pm.expect(res.data).to.have.property(\"accessToken\");",
+                  "    pm.expect(res.data).to.have.property(\"refreshToken\");",
+                  "    ",
+                  "    // Automatically save token for all subsequent requests!",
+                  "    pm.collectionVariables.set(\"ACCESS_TOKEN\", res.data.accessToken);",
+                  "    pm.collectionVariables.set(\"REFRESH_TOKEN\", res.data.refreshToken);",
+                  "    pm.collectionVariables.set(\"USER_ID\", res.data.user._id);",
+                  "    pm.collectionVariables.set(\"USERNAME\", res.data.user.username);",
+                  "    console.log(\"🔑 ACCESS_TOKEN and REFRESH_TOKEN automatically updated in collection!\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"sujal21\",\n  \"email\": \"sujal@example.com\",\n  \"password\": \"secretPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "login"]
+            },
+            "description": "Logs in user with username/email and password. Automatically updates `ACCESS_TOKEN` variable."
+          }
+        },
+        {
+          "name": "3. Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns authenticated user details\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.success).to.eql(true);",
+                  "    pm.expect(res.data._id).to.eql(pm.collectionVariables.get(\"USER_ID\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/current-user",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "current-user"]
+            },
+            "description": "Retrieves the currently authenticated user profile."
+          }
+        },
+        {
+          "name": "4. Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Saves new Access and Refresh tokens\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"accessToken\");",
+                  "    pm.collectionVariables.set(\"ACCESS_TOKEN\", res.data.accessToken);",
+                  "    if (res.data.refreshToken) {",
+                  "        pm.collectionVariables.set(\"REFRESH_TOKEN\", res.data.refreshToken);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/refresh-token",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "refresh-token"]
+            },
+            "description": "Generates a new pair of access & refresh tokens using the existing refresh token."
+          }
+        },
+        {
+          "name": "5. Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"secretPass123\",\n  \"newPassword\": \"newSecretPass456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/change-password",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "change-password"]
+            },
+            "description": "Changes the password for the logged-in user."
+          }
+        },
+        {
+          "name": "6. Update Account Details",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Sujal Updated\",\n  \"email\": \"sujalupdated@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/update-account",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "update-account"]
+            },
+            "description": "Updates full name and email."
+          }
+        },
+        {
+          "name": "7. Update Avatar Image",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": "" }]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/avatar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "avatar"]
+            },
+            "description": "Uploads and updates user avatar on Cloudinary."
+          }
+        },
+        {
+          "name": "8. Update Cover Image",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "coverImage", "type": "file", "src": "" }]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/cover-image",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "cover-image"]
+            },
+            "description": "Uploads and updates user cover banner image on Cloudinary."
+          }
+        },
+        {
+          "name": "9. Get Channel Profile by Username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Channel has subscriber metrics\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"subscribersCount\");",
+                  "    pm.expect(res.data).to.have.property(\"isSubscribed\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/c/{{USERNAME}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "c", "{{USERNAME}}"]
+            },
+            "description": "Fetches public channel profile aggregated with subscribers count and isSubscribed boolean."
+          }
+        },
+        {
+          "name": "10. Get User Watch History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/history",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "history"]
+            },
+            "description": "Fetches aggregated watch history populated with video details and owner information."
+          }
+        },
+        {
+          "name": "11. Logout User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/logout",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "logout"]
+            },
+            "description": "Clears server refresh token from DB and clears client cookies."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Videos",
+      "description": "Video CRUD operations, Cloudinary upload, views counter, search filters, and publish toggle.",
+      "item": [
+        {
+          "name": "1. Publish Video (Auto-saves VIDEO_ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Auto-saves VIDEO_ID\", function () {",
+                  "    const res = pm.response.json();",
+                  "    if (res.data && res.data._id) {",
+                  "        pm.collectionVariables.set(\"VIDEO_ID\", res.data._id);",
+                  "        console.log(\"📹 VIDEO_ID saved:\", res.data._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Mastering MongoDB Aggregations in Node.js", "type": "text" },
+                { "key": "description", "value": "Learn complex aggregation pipelines with Mongoose and Express.", "type": "text" },
+                { "key": "videoFile", "type": "file", "src": "", "description": "Video file (MP4/MKV)" },
+                { "key": "thumbnail", "type": "file", "src": "", "description": "Thumbnail image" }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/videos",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos"]
+            },
+            "description": "Uploads video and thumbnail to Cloudinary, extracts duration, and saves video document."
+          }
+        },
+        {
+          "name": "2. Get All Videos (Paginated & Search)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns paginated video documents\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"videos\");",
+                  "    pm.expect(res.data).to.have.property(\"totalVideos\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/videos?page=1&limit=10&query=&sortBy=createdAt&sortType=desc",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Page number" },
+                { "key": "limit", "value": "10", "description": "Items per page" },
+                { "key": "query", "value": "", "description": "Search keyword for title & description" },
+                { "key": "sortBy", "value": "createdAt", "description": "Sort field" },
+                { "key": "sortType", "value": "desc", "description": "asc or desc" },
+                { "key": "userId", "value": "", "description": "Optional filter by creator user ID", "disabled": true }
+              ]
+            },
+            "description": "Public listing of published videos with pagination, full-text search query, and sorting."
+          }
+        },
+        {
+          "name": "3. Get Video By ID (Increments View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Aggregated video includes owner and likes\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"likesCount\");",
+                  "    pm.expect(res.data).to.have.property(\"isLiked\");",
+                  "    pm.expect(res.data).to.have.property(\"owner\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/videos/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos", "{{VIDEO_ID}}"]
+            },
+            "description": "Increments video views and returns aggregated details with like status and subscriber info."
+          }
+        },
+        {
+          "name": "4. Update Video Details",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Mastering MongoDB Aggregations [Updated Edition]", "type": "text" },
+                { "key": "description", "value": "Updated in-depth guide on aggregation pipelines.", "type": "text" },
+                { "key": "thumbnail", "type": "file", "src": "", "description": "Optional new thumbnail" }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/videos/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos", "{{VIDEO_ID}}"]
+            },
+            "description": "Updates video title, description, or thumbnail."
+          }
+        },
+        {
+          "name": "5. Toggle Video Publish Status",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/videos/toggle/publish/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos", "toggle", "publish", "{{VIDEO_ID}}"]
+            },
+            "description": "Toggles video publish visibility status (`isPublished: true / false`)."
+          }
+        },
+        {
+          "name": "6. Delete Video",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/videos/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["videos", "{{VIDEO_ID}}"]
+            },
+            "description": "Deletes video and associated comments & likes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Comments",
+      "description": "Video comments with pagination, like aggregations, and CRUD.",
+      "item": [
+        {
+          "name": "1. Add Comment (Auto-saves COMMENT_ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Auto-saves COMMENT_ID\", function () {",
+                  "    const res = pm.response.json();",
+                  "    if (res.data && res.data._id) {",
+                  "        pm.collectionVariables.set(\"COMMENT_ID\", res.data._id);",
+                  "        console.log(\"💬 COMMENT_ID saved:\", res.data._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Incredible tutorial! The aggregation pipeline explanation made everything click.\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/comments/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["comments", "{{VIDEO_ID}}"]
+            },
+            "description": "Posts a comment to the specified video."
+          }
+        },
+        {
+          "name": "2. Get Video Comments (Paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns paginated comments\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"comments\");",
+                  "    pm.expect(res.data).to.have.property(\"totalComments\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/comments/{{VIDEO_ID}}?page=1&limit=10",
+              "host": ["{{BASE_URL}}"],
+              "path": ["comments", "{{VIDEO_ID}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Gets paginated comments for a video with like counts and isLiked boolean."
+          }
+        },
+        {
+          "name": "3. Update Comment",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated comment content with extra feedback!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/comments/c/{{COMMENT_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["comments", "c", "{{COMMENT_ID}}"]
+            },
+            "description": "Edits the specified comment."
+          }
+        },
+        {
+          "name": "4. Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/comments/c/{{COMMENT_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["comments", "c", "{{COMMENT_ID}}"]
+            },
+            "description": "Deletes the comment and cleans up associated likes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Likes",
+      "description": "Polymorphic like toggles on Videos, Comments, and Tweets + Liked Videos feed.",
+      "item": [
+        {
+          "name": "1. Toggle Video Like",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Toggles isLiked boolean\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"isLiked\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/likes/toggle/v/{{VIDEO_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["likes", "toggle", "v", "{{VIDEO_ID}}"]
+            },
+            "description": "Toggles like/unlike on a video."
+          }
+        },
+        {
+          "name": "2. Toggle Comment Like",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/likes/toggle/c/{{COMMENT_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["likes", "toggle", "c", "{{COMMENT_ID}}"]
+            },
+            "description": "Toggles like/unlike on a comment."
+          }
+        },
+        {
+          "name": "3. Toggle Tweet Like",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/likes/toggle/t/{{TWEET_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["likes", "toggle", "t", "{{TWEET_ID}}"]
+            },
+            "description": "Toggles like/unlike on a tweet / community post."
+          }
+        },
+        {
+          "name": "4. Get All Liked Videos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns array of liked videos\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/likes/videos",
+              "host": ["{{BASE_URL}}"],
+              "path": ["likes", "videos"]
+            },
+            "description": "Fetches all videos liked by the logged-in user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Playlists",
+      "description": "Create playlists, add/remove videos, calculate total views, and manage collections.",
+      "item": [
+        {
+          "name": "1. Create Playlist (Auto-saves PLAYLIST_ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Auto-saves PLAYLIST_ID\", function () {",
+                  "    const res = pm.response.json();",
+                  "    if (res.data && res.data._id) {",
+                  "        pm.collectionVariables.set(\"PLAYLIST_ID\", res.data._id);",
+                  "        console.log(\"📑 PLAYLIST_ID saved:\", res.data._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Backend Masterclass Series\",\n  \"description\": \"Comprehensive Node.js & MongoDB backend engineering tutorials.\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/playlists",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists"]
+            },
+            "description": "Creates a new empty playlist."
+          }
+        },
+        {
+          "name": "2. Add Video To Playlist",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/add/{{VIDEO_ID}}/{{PLAYLIST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "add", "{{VIDEO_ID}}", "{{PLAYLIST_ID}}"]
+            },
+            "description": "Adds a video to the playlist."
+          }
+        },
+        {
+          "name": "3. Get Playlist By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Includes aggregated metrics\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"totalVideos\");",
+                  "    pm.expect(res.data).to.have.property(\"totalViews\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/{{PLAYLIST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "{{PLAYLIST_ID}}"]
+            },
+            "description": "Fetches playlist details with all video details and total view counts."
+          }
+        },
+        {
+          "name": "4. Update Playlist",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Backend Masterclass Series [2026 Edition]\",\n  \"description\": \"Updated comprehensive backend playlist.\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/{{PLAYLIST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "{{PLAYLIST_ID}}"]
+            },
+            "description": "Updates playlist name or description."
+          }
+        },
+        {
+          "name": "5. Remove Video From Playlist",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/remove/{{VIDEO_ID}}/{{PLAYLIST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "remove", "{{VIDEO_ID}}", "{{PLAYLIST_ID}}"]
+            },
+            "description": "Removes a video from the playlist."
+          }
+        },
+        {
+          "name": "6. Get User Playlists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/user/{{USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "user", "{{USER_ID}}"]
+            },
+            "description": "Fetches all playlists owned by a user."
+          }
+        },
+        {
+          "name": "7. Delete Playlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/playlists/{{PLAYLIST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["playlists", "{{PLAYLIST_ID}}"]
+            },
+            "description": "Deletes the playlist document."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Subscriptions",
+      "description": "Subscribe / unsubscribe channels, subscriber counts, and channel listings.",
+      "item": [
+        {
+          "name": "1. Toggle Channel Subscription",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Toggles isSubscribed boolean\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"isSubscribed\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscriptions/c/{{CHANNEL_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["subscriptions", "c", "{{CHANNEL_ID}}"]
+            },
+            "description": "Subscribes or unsubscribes to a channel."
+          }
+        },
+        {
+          "name": "2. Get Channel Subscribers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscriptions/c/{{CHANNEL_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["subscriptions", "c", "{{CHANNEL_ID}}"]
+            },
+            "description": "Returns list of subscribers subscribed to a channel."
+          }
+        },
+        {
+          "name": "3. Get Subscribed Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscriptions/u/{{USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["subscriptions", "u", "{{USER_ID}}"]
+            },
+            "description": "Returns list of channels subscribed by the specified user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Tweets (Community Posts)",
+      "description": "Community posts / tweets creation, user tweet feeds with like counts, and management.",
+      "item": [
+        {
+          "name": "1. Create Tweet (Auto-saves TWEET_ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Auto-saves TWEET_ID\", function () {",
+                  "    const res = pm.response.json();",
+                  "    if (res.data && res.data._id) {",
+                  "        pm.collectionVariables.set(\"TWEET_ID\", res.data._id);",
+                  "        console.log(\"🐦 TWEET_ID saved:\", res.data._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Just published a brand new video tutorial on StreamCore! Check it out 🚀\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/tweets",
+              "host": ["{{BASE_URL}}"],
+              "path": ["tweets"]
+            },
+            "description": "Publishes a new community post/tweet."
+          }
+        },
+        {
+          "name": "2. Get User Tweets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns array of tweets with likesCount\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/tweets/user/{{USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["tweets", "user", "{{USER_ID}}"]
+            },
+            "description": "Fetches all tweets posted by a user, including likes count and isLiked status."
+          }
+        },
+        {
+          "name": "3. Update Tweet",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated tweet content with refined announcement! 🌟\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/tweets/{{TWEET_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["tweets", "{{TWEET_ID}}"]
+            },
+            "description": "Edits the content of a tweet."
+          }
+        },
+        {
+          "name": "4. Delete Tweet",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/tweets/{{TWEET_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["tweets", "{{TWEET_ID}}"]
+            },
+            "description": "Deletes the tweet and related likes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Dashboard",
+      "description": "Creator channel analytics (total views, subscribers, video count, likes) and video list.",
+      "item": [
+        {
+          "name": "1. Get Channel Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns all channel metrics\", function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.data).to.have.property(\"totalSubscribers\");",
+                  "    pm.expect(res.data).to.have.property(\"totalVideos\");",
+                  "    pm.expect(res.data).to.have.property(\"totalViews\");",
+                  "    pm.expect(res.data).to.have.property(\"totalLikes\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/dashboard/stats",
+              "host": ["{{BASE_URL}}"],
+              "path": ["dashboard", "stats"]
+            },
+            "description": "Returns aggregated channel performance metrics (total views, subscribers, videos, likes)."
+          }
+        },
+        {
+          "name": "2. Get Channel Videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/dashboard/videos",
+              "host": ["{{BASE_URL}}"],
+              "path": ["dashboard", "videos"]
+            },
+            "description": "Returns all videos uploaded by the logged-in creator with likes count and views."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "ACCESS_TOKEN",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "REFRESH_TOKEN",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "USER_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "USERNAME",
+      "value": "sujal21",
+      "type": "string"
+    },
+    {
+      "key": "CHANNEL_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "VIDEO_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "COMMENT_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "TWEET_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "PLAYLIST_ID",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

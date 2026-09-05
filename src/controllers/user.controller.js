@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {User} from "../models/user.model.js";
@@ -220,16 +221,16 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
                secure: true
            }
            
-           const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id) // this will also update refresh token in db
+           const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id) // this will also update refresh token in db
            
            return res
            .status(200)
            .cookie("accessToken", accessToken, options)
-           .cookie("refreshToken", newRefreshToken, options)
+           .cookie("refreshToken", refreshToken, options)
            .json(
                new ApiResponse(
                    200,
-                   {accessToken, refreshToken: newRefreshToken},
+                   {accessToken, refreshToken},
                    "Access token refreshed successfully"))
      } catch (error) {
         throw new ApiError(401, error?.message || "Invalid refresh token")
