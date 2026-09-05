@@ -30,23 +30,6 @@ A complete RESTful backend API for a video sharing and streaming platform, built
 
 ---
 
-## 🏗 Architecture & Flow
-
-```mermaid
-graph TD
-    Client[Client / Postman / Frontend] --> ExpressApp[Express Router]
-    ExpressApp --> AuthGuard[JWT Auth Middleware]
-    ExpressApp --> Multer[Multer Disk Storage]
-    Multer --> Cloudinary[Cloudinary Media Storage]
-    AuthGuard --> Controllers[Controller Layer]
-    Controllers --> Aggregation[MongoDB Aggregation Pipeline]
-    Aggregation --> DB[(MongoDB Atlas)]
-    Controllers --> Response[Standardized ApiResponse]
-    Controllers --> ErrorHandler[Global ApiError Handler]
-```
-
----
-
 ## 📁 Folder Structure
 
 ```
@@ -189,6 +172,3 @@ npm start
 2. Run `01 - Users & Authentication > 2. Login User`. The `ACCESS_TOKEN` is automatically captured and injected into subsequent protected requests.
 
 ---
-
-## 📄 License
-ISC License
